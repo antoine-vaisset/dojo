@@ -1,20 +1,22 @@
 package com.gildedrose;
 
-import org.apache.commons.io.FileUtils;
+import com.gildedrose.quality.DefaultQualityControl;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class TexttestFixture {
     public static void main(String[] args) throws IOException {
         Output output = new Output();
         output.append("OMGHAI!");
 
-        Item[] items = new Item[] {
+        Item[] items = new Item[]{
                 new Item("+5 Dexterity Vest", 10, 20), //
                 new Item("Aged Brie", 2, 0), //
                 new Item("Elixir of the Mongoose", 5, 7), //
@@ -24,9 +26,9 @@ public class TexttestFixture {
                 new Item("Backstage passes to a TAFKAL80ETC concert", 10, 49),
                 new Item("Backstage passes to a TAFKAL80ETC concert", 5, 49),
                 // this conjured item does not work properly yet
-                new Item("Conjured Mana Cake", 3, 6) };
+                new Item("Conjured Mana Cake", 3, 6)};
 
-        GildedRose app = new GildedRose(items);
+        GildedRose app = new GildedRose(new SellInService(), new DefaultQualityControl());
 
         int days = 2;
         if (args.length > 0) {
@@ -40,27 +42,30 @@ public class TexttestFixture {
                 output.append(item);
             }
             output.append();
-            app.updateQuality();
+            app.updateQuality(Arrays.asList(items));
         }
 
         String expected = new String(Files.readAllBytes(Paths.get("src/test/resources/expected.txt")));
-        System.out.println(StringUtils.difference(output.toString(), expected));
+        output.printWithDiff(expected);
 
-        if(!StringUtils.equals(output.toString(), expected)){
+        if (!StringUtils.equals(output.toString(), expected)) {
             Assert.fail("Output is not same as expected result");
         }
     }
 
 
     private static class Output {
-        private String ouput;
+        private static final String RED ="\u001B[31m";
+        private static final String RESET ="\u001B[0m";
+
+        private List<String> output;
 
         public Output() {
-            ouput = "";
+            output = new ArrayList<>();
         }
 
-        public Output append(String str){
-            this.ouput = ouput.concat(str).concat("\n");
+        public Output append(String str) {
+            this.output.add(str);
             return this;
         }
 
@@ -74,42 +79,27 @@ public class TexttestFixture {
             return this;
         }
 
-        @Override
-        public String toString() {
-            return ouput;
-        }
-    }
+        public void printWithDiff(String expected) {
+            List<String> expectedList = Arrays.asList(expected.split("\n"));
+            for (int i = 0; i < output.size(); i++) {
+                String outputLine = output.get(i);
+                String expectedLine = i < expectedList.size() ? expectedList.get(i): "";
+                int indexOfDiff = StringUtils.indexOfDifference(outputLine, expectedLine);
 
-    public static String difference(String str1, String str2) {
-        if (str1 == null) {
-            return str2;
-        }
-        if (str2 == null) {
-            return str1;
-        }
-        int at = indexOfDifference(str1, str2);
-        if (at == -1) {
-            return "";
-        }
-        return str2.substring(at);
-    }
+                if(indexOfDiff == -1){
+                    System.out.println(StringUtils.rightPad(outputLine, 70, " ") + expectedLine);
+                } else {
+                    String left = outputLine.substring(0, indexOfDiff);
+                    String right = outputLine.substring(indexOfDiff);
+                    System.out.println(StringUtils.rightPad(left + RED + right + RESET, 70 + RED.length() + RESET.length(), " ") + expectedLine);
+                }
 
-    public static int indexOfDifference(String str1, String str2) {
-        if (str1 == str2) {
-            return -1;
-        }
-        if (str1 == null || str2 == null) {
-            return 0;
-        }
-        int i;
-        for (i = 0; i < str1.length() && i < str2.length(); ++i) {
-            if (str1.charAt(i) != str2.charAt(i)) {
-                break;
             }
         }
-        if (i < str2.length() || i < str1.length()) {
-            return i;
+
+        @Override
+        public String toString() {
+            return String.join("\n", output);
         }
-        return -1;
     }
 }

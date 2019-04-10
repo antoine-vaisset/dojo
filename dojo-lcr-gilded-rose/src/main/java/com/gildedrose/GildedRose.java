@@ -1,62 +1,40 @@
 package com.gildedrose;
 
-class GildedRose {
-    Item[] items;
+import com.gildedrose.quality.DefaultQualityControl;
+import com.gildedrose.quality.IQualityControl;
 
-    public GildedRose(Item[] items) {
-        this.items = items;
+import java.util.List;
+
+public class GildedRose {
+    private final SellInService sellInService;
+    private final DefaultQualityControl defaultQualityControl;
+
+    public GildedRose(SellInService sellInService, DefaultQualityControl defaultQualityControl) {
+        this.sellInService = sellInService;
+        this.defaultQualityControl = defaultQualityControl;
     }
 
-    public void updateQuality() {
-        for (int i = 0; i < items.length; i++) {
-            if (!items[i].name.equals("Aged Brie")
-                    && !items[i].name.equals("Backstage passes to a TAFKAL80ETC concert")) {
-                if (items[i].quality > 0) {
-                    if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
-                        items[i].quality = items[i].quality - 1;
-                    }
-                }
-            } else {
-                if (items[i].quality < 50) {
-                    items[i].quality = items[i].quality + 1;
 
-                    if (items[i].name.equals("Backstage passes to a TAFKAL80ETC concert")) {
-                        if (items[i].sellIn < 11) {
-                            if (items[i].quality < 50) {
-                                items[i].quality = items[i].quality + 1;
-                            }
-                        }
-
-                        if (items[i].sellIn < 6) {
-                            if (items[i].quality < 50) {
-                                items[i].quality = items[i].quality + 1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
-                items[i].sellIn = items[i].sellIn - 1;
-            }
-
-            if (items[i].sellIn < 0) {
-                if (!items[i].name.equals("Aged Brie")) {
-                    if (!items[i].name.equals("Backstage passes to a TAFKAL80ETC concert")) {
-                        if (items[i].quality > 0) {
-                            if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
-                                items[i].quality = items[i].quality - 1;
-                            }
-                        }
-                    } else {
-                        items[i].quality = items[i].quality - items[i].quality;
-                    }
-                } else {
-                    if (items[i].quality < 50) {
-                        items[i].quality = items[i].quality + 1;
-                    }
-                }
-            }
+    public void updateQuality(List<Item> items) {
+        for (Item item : items) {
+            udpateSellInFor(item);
+            updateQualityFor(item);
         }
     }
+
+    private void updateQualityFor(Item item) {
+        getQualityControl(item)
+                .updateQualityFor(item);
+    }
+
+    private IQualityControl getQualityControl(Item item) {
+        return Items.fromValue(item.getName())
+                .map(Items::qualityControl)
+                .orElse(defaultQualityControl);
+    }
+
+    private void udpateSellInFor(Item item) {
+        sellInService.updateSellInFor(item);
+    }
+
 }
